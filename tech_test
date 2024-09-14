@@ -1,1 +1,55 @@
+#!/bin/bash
+
+# CUBO+ Technical Test Solution
+# Fetch and analyze Bitcoin transaction data using mempool.space API
+# Solution by: Kaylee Rodriguez
+
+# Step 1: Fetch transactions for El Salvador's Bitcoin address
+
+address="32ixEdVJWo3kmvJGMTZq5jAQVZZeuwnqzo"
+transactions_file="transactions.json"
+
+# Fetch the transaction history using mempool.space API
+echo "Fetching transactions for address $address..."
+curl -sSL "https://mempool.space/api/address/$address/txs/chain" > 
+$transactions_file
+
+# Step 2: Calculate balances (on-chain and mempool)
+
+echo "Calculating balances..."
+on_chain_balance=$(jq '[.[] | select(.status.confirmed == true) | 
+.vout[].value] | add' $transactions_file)
+mempool_balance=$(jq '[.[] | select(.status.confirmed == false) | 
+.vout[].value] | add' $transactions_file)
+
+echo "On-chain balance: $on_chain_balance sats"
+echo "Mempool balance: $mempool_balance sats"
+
+# Step 3: Filter transactions within specific time periods (30 days and 7 
+days)
+current_time=$(date +%s)
+thirty_days_ago=$((current_time - 30 * 24 * 60 * 60))
+seven_days_ago=$((current_time - 7 * 24 * 60 * 60))
+
+echo "Filtering transactions from the last 30 days..."
+jq '[.[] | select(.status.block_time >= '$thirty_days_ago')]' 
+$transactions_file > transactions_30d.json
+
+echo "Filtering transactions from the last 7 days..."
+jq '[.[] | select(.status.block_time >= '$seven_days_ago')]' 
+$transactions_file > transactions_7d.json
+
+# Step 4: Calculate balance variations over the last 30 and 7 days
+
+# Calculate balance for the last 30 days
+balance_30d=$(jq '[.[] | select(.status.block_time >= '$thirty_days_ago') 
+| .vout[]?.value] | add // 0' $transactions_file)
+
+# Calculate balance for the last 7 days
+balance_7d=$(jq '[.[] | select(.status.block_time >= '$seven_days_ago') | 
+.vout[]?.value] | add // 0' $transactions_file)
+
+# Print the balance variations
+echo "Balance variation over the last 30 days: ${balance_30d:-0} sats"
+echo "Balance variation over the last 7 days: ${balance_7d:-0} sats"
 
