@@ -12,14 +12,28 @@ echo "Address: $address"
 echo "30 days ago timestamp: $thirty_days_ago"
 echo "7 days ago timestamp: $seven_days_ago"
 
+# Step 1: Calculate on-chain and mempool balances
+on_chain_balance=$(curl -sSL "https://mempool.space/api/address/$address" | jq '.chain_stats.funded_txo_sum - .chain_stats.spent_txo_sum')
+mempool_balance=$(curl -sSL "https://mempool.space/api/address/$address" | jq '.mempool_stats.funded_txo_sum - .mempool_stats.spent_txo_sum')
+
+# Output on-chain and mempool balances
+echo -e "\nOn-chain Balance: ${on_chain_balance:-0} sats"
+echo "Mempool Balance: ${mempool_balance:-0} sats"
+
 # Create data directory if it doesn't exist
 mkdir -p data
 
-# Step 1: Filter transactions within the last 30 and 7 days
-jq -s 'map(select(.status.block_time >= '"$thirty_days_ago"'))' $transactions_file > data/transactions_30d.json
-jq -s 'map(select(.status.block_time >= '"$seven_days_ago"'))' $transactions_file > data/transactions_7d.json
+# Step 2: Ensure transactions file exists
+if [ ! -f "$transactions_file" ]; then
+    echo "Error: Transactions file $transactions_file not found!"
+    exit 1
+fi
 
-# Step 2: Define functions to calculate received and sent amounts
+# Step 3: Filter transactions within the last 30 and 7 days
+jq -s 'map(select(.status.block_time >= '"$thirty_days_ago"'))' "$transactions_file" > data/transactions_30d.json
+jq -s 'map(select(.status.block_time >= '"$seven_days_ago"'))' "$transactions_file" > data/transactions_7d.json
+
+# Step 4: Define functions to calculate received and sent amounts
 calculate_received() {
   file=$1
   total_received=$(jq '[.[].vout[] | select(.scriptpubkey_address == "'$address'") | .value] | add' "$file")
@@ -46,8 +60,8 @@ calculate_sent() {
   echo $total_sent
 }
 
-# Step 3: Calculate balance change over the last 30 days
-echo "Calculating received for the last 30 days..."
+# Step 5: Calculate balance change over the last 30 days
+echo -e "\nCalculating received for the last 30 days..."
 received_30d=$(calculate_received data/transactions_30d.json)
 echo "Received for 30 days: $received_30d"
 
@@ -58,8 +72,8 @@ echo "Sent for 30 days: $sent_30d"
 balance_change_30d=$((received_30d - sent_30d))
 echo "Balance variation over the last 30 days: $balance_change_30d sats"
 
-# Step 4: Calculate balance change over the last 7 days
-echo "Calculating received for the last 7 days..."
+# Step 6: Calculate balance change over the last 7 days
+echo -e "\nCalculating received for the last 7 days..."
 received_7d=$(calculate_received data/transactions_7d.json)
 echo "Received for 7 days: $received_7d"
 
@@ -70,8 +84,8 @@ echo "Sent for 7 days: $sent_7d"
 balance_change_7d=$((received_7d - sent_7d))
 echo "Balance variation over the last 7 days: $balance_change_7d sats"
 
-# Step 5: Output final results
-echo "Total on-chain balance: ${balance_change_30d:-0} sats"
+# Step 7: Output final results
+echo -e "\nTotal on-chain balance: ${on_chain_balance:-0} sats"
 echo "Balance variation over the last 30 days: ${balance_change_30d:-0} sats"
 echo "Balance variation over the last 7 days: ${balance_change_7d:-0} sats"
 
