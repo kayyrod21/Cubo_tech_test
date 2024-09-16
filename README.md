@@ -1,7 +1,7 @@
 ### CUBO+ Technical Test
 
-[video](link to video here)
-[solution](link to the specific file of the solution in the repo)
+[video](https://drive.google.com/file/d/1TuDpVMneJ9sRw2obrMpwSg4OkwgRhz8e/view?usp=sharing)
+[solution](https://github.com/kayyrod21/Cuboplus_tech_test/blob/main/tech_test)
 
 This repository contains my solution for the CUBO+ technical test.
 
